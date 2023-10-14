@@ -1,36 +1,53 @@
 require 'net/http'
 
 class CustomNetWork
-    
-    def initialize(url)
-        if url.present?
-            @uri = URI(url)
-        else
-            @uri = URI('http://google.com')
-        end
-    end
 
-    def get
-        respose = Net::HTTP.get(@uri)
-        if get_status(respose) == '200'
-            response
-        elsif get_status(respose) == Net::HTTPRedirection
-            @uri = URI(response['location'])
-            get
-        else
-            nil
-        end
-    end
-    
-    def post(params)
-        Net::HTTP.post_form(@uri, params)
-    end
+  def initialize(url = nil)
+    @uri = URI(url || 'http://google.com')
+    @response = nil
+    @responses = []
+  end
 
-    def get_status (response)
-        response.code
-    end
-    
-    def get_response (response)
-        response.body
-    end
+  def get
+    res = core_implementation(proc { Net::HTTP.get_response(@uri) })
+      case res
+      when Net::HTTPMovedPermanently
+        @response = core_implementation(proc { Net::HTTP.get_response(URI.parse(res['location'])) }) if res.is_a?(Net::HTTPMovedPermanently)
+          return @response
+      end
+      @response = res
+  end
+
+  def descrive
+    p "response: #{@response.code}"
+    p "uri: #{@uri}"
+    p "status_code : #{@response.code}"
+  end
+
+  def responsies
+    @responses
+  end
+
+  def clear
+    @responses = []
+    @response = nil
+  end
+
+  private
+  def core_implementation(proc)
+    retries = 0
+      begin
+        response = proc.call
+        @responses << response
+        response
+      rescue SocketError, Net::HTTPBadRequest
+        retries += 1
+        raise if retries > 3
+
+        # 再試行する
+        sleep(3 * (0.5 + (rand / 2)) * (1.5**(retries - 1)))
+        retry
+      end
+  end
+
 end
