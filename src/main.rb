@@ -1,11 +1,11 @@
-require_relative  'io/basic'
+require_relative 'io/basic'
 
 class Main
-    def run
-        s = CustomIO.new
-        n = s.read_array
-        p n
-    end
+  def run
+    s = CustomIO.new
+    n = s.read_array
+    p n
+  end
 end
 
 main = Main.new
