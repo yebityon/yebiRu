@@ -1,11 +1,16 @@
 require 'net/http'
 
-class CustomNetWork
+class Lurc
 
-  def initialize(url = nil)
-    @uri = URI(url || 'http://google.com')
+  attr_reader :uri
+
+  def initialize
     @response = nil
     @responses = []
+  end
+
+  def uri=(url)
+    @uri = URI(url)
   end
 
   def get
@@ -18,15 +23,30 @@ class CustomNetWork
       @response = res
   end
 
-  def descrive
+  def post(params = {})
+    res = core_implementation(proc { Net::HTTP.post_form(@uri, params) })
+  end
+
+  def desc
     p "response: #{@response.code}"
     p "uri: #{@uri}"
     p "status_code : #{@response.code}"
   end
 
+  def desc_headers(response: @responses.last, key: nil)
+    h = response.each_header.each_with_object({}) { |(k, v), headers| headers[k] = v }
+    return (key.nil? ? h : h[key])
+  end
+
+  def response=(res)
+    @responses << res
+    @response = res
+  end
+
   def responsies
     @responses
   end
+
 
   def clear
     @responses = []
@@ -44,7 +64,6 @@ class CustomNetWork
         retries += 1
         raise if retries > 3
 
-        # 再試行する
         sleep(3 * (0.5 + (rand / 2)) * (1.5**(retries - 1)))
         retry
       end
