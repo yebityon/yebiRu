@@ -2,7 +2,8 @@ class Hash
   def deep_diff(c:, o: self, d: {})
     o.each do |k, v|
       if c[k].is_a?(Hash)
-        d[k] = deep_diff(c: c[k], o: v)
+        dd = deep_diff(c: c[k], o: v)
+        d[k] = dd unless dd.empty?
       elsif  v != c[k]
         d[k] = {c: c[k], o: v}
       end
