@@ -1,6 +1,7 @@
 require 'net/http'
 require 'uri'
 require 'byebug'
+require 'readline'
 
 class String
   def black;          "\e[30m#{self}\e[0m" end
@@ -40,7 +41,7 @@ module Lurc
       @code = response&.code || ''
     end
 
-    def pretty_print
+    def pp
       header_str = @headers.map { |k, v| "\t#{k}: #{v}" }.join("\n")
       print "#{"Code".bold}: #{@code}\n#{"Body".bold}: #{@body[0...20]}\n#{"Header".bold}:\n#{header_str}\n"
     end
@@ -61,14 +62,14 @@ module Lurc
   class Query
     attr_accessor :req, :res, :child
 
-    def initialize(req, res = nil)
+    def initialize(req, res = nil, child = nil)
       @req = req
       @res = res unless res.nil?
-      @child = []
+      @child = child || []
     end
 
     def dup
-      self.class.new(@req.dup, @res.dup)
+      self.class.new(@req.dup, @res.dup, @child)
     end
 
     def to_h
@@ -81,7 +82,7 @@ module Lurc
 
     def pretty_str
       pretty_str = "#{"Request".bold}: #{@req.method.to_s} #{@req.uri} #{"Response".bold}: #{@res.code}\n"
-      if @child.length > 0
+      unless @child.empty?
         @child.map do |c|
           req = c.req
           res = c.res
@@ -91,16 +92,18 @@ module Lurc
       pretty_str
     end
 
-    def pretty_print
+    def pp
       print pretty_str
     end
+
   end
 
   class Lurc
-    attr_accessor :queries
+    attr_accessor :queries, :target
 
-    def initialize(config = {})
+    def initialize
       @queries = []
+      @target = nil
     end
 
     def get(req)
@@ -116,7 +119,7 @@ module Lurc
       @queries[index]
     end
 
-    def pretty_print
+    def pp
       pretty_str = ''
       for i in 0...@queries.length
         pretty_str += "#{"index".bold}: #{i} #{@queries[i].pretty_str}"
@@ -126,6 +129,48 @@ module Lurc
 
     def [](index)
       @queries[index]
+    end
+
+    def attach(index)
+      @target = @queries[index]
+    end
+
+    def req
+      @target.req
+    end
+
+    def res
+      @target.res
+    end
+
+    def cp
+      @queries.push(@target.dup)
+      @target = @queries.last
+    end
+
+    def send(req)
+      _get(req, true)
+    end
+
+    def size
+      @queries.size
+    end
+
+    def q
+      @queries
+    end
+
+    def ireq
+      if @target.nil?
+        print "No target query selected"
+        return
+      end
+      loop do 
+        input = Readline.readline('> nekoneko', true)
+        Readline::HISTORY.pop if input.empty?
+        break if input == 'exit'
+        puts "You entered: #{input}"
+      end
     end
 
     private
