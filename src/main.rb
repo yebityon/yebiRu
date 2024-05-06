@@ -1,12 +1,6 @@
-require_relative 'io/basic'
+require_relative 'network/curl'
+require 'byebug'
 
-class Main
-  def run
-    s = CustomIO.new
-    n = s.read_array
-    p n
-  end
-end
-
-main = Main.new
-main.run
+a = Lurc::Lurc.new
+a.get "https://google.com"
+p a.hisotry
