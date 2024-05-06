@@ -40,9 +40,9 @@ module Lurc
       @code = response&.code || ''
     end
 
-    def to_s
+    def pretty_print
       header_str = @headers.map { |k, v| "\t#{k}: #{v}" }.join("\n")
-      "Code: #{@code}\nBody: #{@body[0...10]}\nHeader:\n#{header_str}"
+      print "#{"Code".bold}: #{@code}\n#{"Body".bold}: #{@body[0...20]}\n#{"Header".bold}:\n#{header_str}\n"
     end
   end
 
@@ -79,6 +79,21 @@ module Lurc
       @res = res
     end
 
+    def pretty_str
+      pretty_str = "#{"Request".bold}: #{@req.method.to_s} #{@req.uri} #{"Response".bold}: #{@res.code}\n"
+      if @child.length > 0
+        @child.map do |c|
+          req = c.req
+          res = c.res
+          pretty_str += " ---> #{"Request".bold}: #{req.method.to_s} #{req.uri} #{"Response".bold}: #{res.code}\n"
+        end
+      end
+      pretty_str
+    end
+
+    def pretty_print
+      print pretty_str
+    end
   end
 
   class Lurc
@@ -95,6 +110,22 @@ module Lurc
         req = Request.new(req[:uri], req[:cookie], req[:headers], req[:params])
       end
       _get(req, false)
+    end
+
+    def get_query_detail(index)
+      @queries[index]
+    end
+
+    def pretty_print
+      pretty_str = ''
+      for i in 0...@queries.length
+        pretty_str += "#{"index".bold}: #{i} #{@queries[i].pretty_str}"
+      end
+      print pretty_str
+    end
+
+    def [](index)
+      @queries[index]
     end
 
     private
