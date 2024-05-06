@@ -40,9 +40,9 @@ module Lurc
       @code = response&.code || ''
     end
 
-    def inspect
+    def to_s
       header_str = @headers.map { |k, v| "\t#{k}: #{v}" }.join("\n")
-      "Code: #{@code}\nBody: #{@body}\nHeader:\n#{header_str}"
+      "Code: #{@code}\nBody: #{@body[0...10]}\nHeader:\n#{header_str}"
     end
   end
 
@@ -75,73 +75,17 @@ module Lurc
       { req: @req, res: @res }
     end
 
-    def append_child(res)
-      @child.last.res = res
+    def add_response(res)
+      @res = res
     end
 
-    def append_child_request(req)
-      @child << Query.new(req)
-    end
-  end
-
-  class Queris
-
-    attr_accessor :queries
-
-    def initialize(queries = [])
-      @queries = queries
-    end
-
-    def add(query)
-      @queries << query
-    end
-
-    def to_h
-      @queries.map(&:to_h)
-    end
-
-    def clear
-      @queries.clear
-    end
-
-    def top
-      @queries.last
-    end
-
-    def emplace_repsponse(response)
-      @queries.last.res = response
-    end
-
-    def emplace_child_response(response)
-      @queries.last.append_child response
-    end
-
-    def emplace_child_request(request)
-      @queries.last.append_child_request request
-    end
-
-    def inspect
-      pretty_str = ''
-      @queries.each do |q|
-        pretty_str += "#{"Request".bold}: #{q.req.method} #{q.req.uri}   #{"Response".bold}: #{q.res.code}\n"
-        if q.child.size > 0
-          q.child.each do |c|
-            pretty_str += " ---> #{"Request".bold}: #{c.req.method} #{c.req.uri}   #{"Response".bold}: #{c.res.code}\n"
-          end
-        end
-      end
-      pretty_str.chomp
-    end
   end
 
   class Lurc
+    attr_accessor :queries
 
     def initialize(config = {})
-      @queries = Queris.new
-    end
-
-    def hisotry
-      @queries
+      @queries = []
     end
 
     def get(req)
@@ -153,12 +97,11 @@ module Lurc
       _get(req, false)
     end
 
-
     private
     def _get(req, child_query = false)
       req.method = 'GET'
-      @queries.add(Query.new(req)) unless child_query
-      @queries.emplace_child_request(req) if child_query
+      @queries.push(Query.new(req)) unless child_query
+      @queries.last.child.push(Query.new(req)) if child_query
 
       get_proc = proc {
         uri = URI.parse(req.uri)
@@ -171,8 +114,11 @@ module Lurc
         http.request(request)
       }
       res = with_circuit_breacker(get_proc)
-      @queries.emplace_repsponse(Response.new(res)) unless child_query
-      @queries.emplace_child_response(_get(Request.new(res['location']),true)) if res.is_a?(Net::HTTPMovedPermanently)
+      @queries.last.add_response(Response.new(res)) unless child_query
+      if res.is_a?(Net::HTTPRedirection)
+        redirect = _get(Request.new(res['location']),true)
+        @queries.last.child.last.add_response(redirect)
+      end
       Response.new(res)
     end
 
