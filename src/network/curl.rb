@@ -45,6 +45,18 @@ module Lurc
       header_str = @headers.map { |k, v| "\t#{k}: #{v}" }.join("\n")
       print "#{"Code".bold}: #{@code}\n#{"Body".bold}: #{@body[0...20]}\n#{"Header".bold}:\n#{header_str}\n"
     end
+
+    def serialize
+      { method: @method, headers: @headers, body: @body, code: @code }.to_json
+    end
+
+    def load(serialized)
+      data = JSON.parse(serialized)
+      @method = data['method']
+      @headers = data['headers']
+      @body = data['body']
+      @code = data['code']
+    end
   end
 
   class Request
