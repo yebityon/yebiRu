@@ -1,12 +1,9 @@
-require_relative 'io/basic'
+require_relative 'network/curl'
+require 'byebug'
 
-class Main
-  def run
-    s = CustomIO.new
-    n = s.read_array
-    p n
-  end
-end
-
-main = Main.new
-main.run
+a = Lurc::Lurc.new
+a.get "https://google.com"
+a.get "https://cnmeirh5ep.ap-northeast-1.awsapprunner.com/api/v1/5/companies"
+a.get "https://cnmeirh5ep.ap-northeast-1.awsapprunner.com/api/v1/5/companies"
+a[0].res.pretty_print
+a.pretty_print
